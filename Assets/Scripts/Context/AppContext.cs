@@ -2,7 +2,9 @@
 using App.Signals;
 using UnityEngine;
 using App.StateMachines;
-using strange.extensions.injector.api;
+using System;
+using App.LevelBuilder;
+using App.ResourcesLoaders;
 
 namespace App.Context
 {
@@ -14,7 +16,9 @@ namespace App.Context
         {
             base.mapBindings();
 
+            BindResourcesLoader();
             BindSignals();
+            BindLevelBuilder();
             BindAppStateMachine();
             BindCommands();
         }
@@ -23,8 +27,13 @@ namespace App.Context
         {
             base.Launch();
 
-            var signal = injectionBinder.GetInstance<AppStartSignal>() as AppStartSignal;
+            var signal = injectionBinder.GetInstance<AppStartSignal>();
             signal.Dispatch();
+        }
+
+        private void BindResourcesLoader()
+        {
+            injectionBinder.Bind<IResourcesLoader>().To<LocalResourcesLoader>().ToSingleton().CrossContext();
         }
 
         private void BindSignals()
@@ -33,20 +42,30 @@ namespace App.Context
             injectionBinder.Bind<MainMenuEnteredSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<ExitMainMenuSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<MainMenuExitedSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<LevelLoadedSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<LevelUnloadedSignal>().ToSingleton().CrossContext();
         }
 
         private void BindAppStateMachine()
         {
             injectionBinder.Bind<MenuState>().To<MenuState>();
+            injectionBinder.Bind<LoadingState>().To<LoadingState>();
             injectionBinder.Bind<GameplayState>().To<GameplayState>();
             injectionBinder.Bind<PauseState>().To<PauseState>();
+            injectionBinder.Bind<UnloadingState>().To<UnloadingState>();
 
             injectionBinder.Bind<IStateMachine>().To<AppStateMachine>().ToSingleton().CrossContext();
         }
 
         private void BindCommands()
         {
-            commandBinder.Bind<AppStartSignal>().To<AppStartCommand>().Once();
+            commandBinder.Bind<AppStartSignal>().To<EnterMainMenuCommand>().Once();
+            commandBinder.Bind<MainMenuExitedSignal>().To<LoadLevelCommand>();
+        }
+
+        private void BindLevelBuilder()
+        {
+            injectionBinder.Bind<ILevelBuilder>().To<Builder>().ToSingleton();
         }
     }
 }

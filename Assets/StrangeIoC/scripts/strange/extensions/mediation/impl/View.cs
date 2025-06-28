@@ -48,44 +48,81 @@ namespace strange.extensions.mediation.impl
 			}
 		}
 
-		public bool registeredWithContext{get; set;}
+		/// Determines the type of event the View is bubbling to the Context
+		protected enum BubbleType
+		{
+			Add,
+			Remove,
+			Enable,
+			Disable
+		}
+
+		/// A flag for allowing the View to register with the Context
+		/// In general you can ignore this. But some developers have asked for a way of disabling
+		///  View registration with a checkbox from Unity, so here it is.
+		/// If you want to expose this capability either
+		/// (1) uncomment the commented-out line immediately below, or
+		/// (2) subclass View and override the autoRegisterWithContext method using your own custom (public) field.
+		//[SerializeField]
+		protected bool registerWithContext = true;
+		virtual public bool autoRegisterWithContext
+		{
+			get { return registerWithContext; }
+			set { registerWithContext = value; }
+		}
+
+		public bool registeredWithContext { get; set; }
 
 		/// A MonoBehaviour Awake handler.
 		/// The View will attempt to connect to the Context at this moment.
-		protected virtual void Awake ()
+		protected virtual void Awake()
 		{
-			if (!registeredWithContext)
-				bubbleToContext(this, true, false);
+			if (autoRegisterWithContext && !registeredWithContext && shouldRegister)
+				bubbleToContext(this, BubbleType.Add, false);
 		}
 
 		/// A MonoBehaviour Start handler
 		/// If the View is not yet registered with the Context, it will 
 		/// attempt to connect again at this moment.
-		protected virtual void Start ()
+		protected virtual void Start()
 		{
-			if (!registeredWithContext)
-				bubbleToContext(this, true, true);
+			if (autoRegisterWithContext && !registeredWithContext && shouldRegister)
+				bubbleToContext(this, BubbleType.Add, true);
 		}
 
 		/// A MonoBehaviour OnDestroy handler
 		/// The View will inform the Context that it is about to be
 		/// destroyed.
-		protected virtual void OnDestroy ()
+		protected virtual void OnDestroy()
 		{
-			bubbleToContext(this, false, false);
+			bubbleToContext(this, BubbleType.Remove, false);
+		}
+
+		/// A MonoBehaviour OnEnable handler
+		/// The View will inform the Context that it was enabled
+		protected virtual void OnEnable()
+		{
+			bubbleToContext(this, BubbleType.Enable, false);
+		}
+
+		/// A MonoBehaviour OnDisable handler
+		/// The View will inform the Context that it was disabled
+		protected virtual void OnDisable()
+		{
+			bubbleToContext(this, BubbleType.Disable, false);
 		}
 
 		/// Recurses through Transform.parent to find the GameObject to which ContextView is attached
 		/// Has a loop limit of 100 levels.
 		/// By default, raises an Exception if no Context is found.
-		virtual protected void bubbleToContext(MonoBehaviour view, bool toAdd, bool finalTry)
+		virtual protected void bubbleToContext(MonoBehaviour view, BubbleType type, bool finalTry)
 		{
 			const int LOOP_MAX = 100;
 			int loopLimiter = 0;
 			Transform trans = view.gameObject.transform;
-			while(trans.parent != null && loopLimiter < LOOP_MAX)
+			while (trans.parent != null && loopLimiter < LOOP_MAX)
 			{
-				loopLimiter ++;
+				loopLimiter++;
 				trans = trans.parent;
 				if (trans.gameObject.GetComponent<ContextView>() != null)
 				{
@@ -93,31 +130,45 @@ namespace strange.extensions.mediation.impl
 					if (contextView.context != null)
 					{
 						IContext context = contextView.context;
-						if (toAdd)
+						bool success = true;
+
+						switch (type)
 						{
-							context.AddView(view);
-							registeredWithContext = true;
-							return;
+							case BubbleType.Add:
+								context.AddView(view);
+								registeredWithContext = true;
+								break;
+							case BubbleType.Remove:
+								context.RemoveView(view);
+								break;
+							case BubbleType.Enable:
+								context.EnableView(view);
+								break;
+							case BubbleType.Disable:
+								context.DisableView(view);
+								break;
+							default:
+								success = false;
+								break;
 						}
-						else
+
+						if (success)
 						{
-							context.RemoveView(view);
 							return;
 						}
 					}
 				}
 			}
-			if (requiresContext && finalTry)
+			if (requiresContext && finalTry && type == BubbleType.Add)
 			{
 				//last ditch. If there's a Context anywhere, we'll use it!
 				if (Context.firstContext != null)
 				{
-					Context.firstContext.AddView (view);
+					Context.firstContext.AddView(view);
 					registeredWithContext = true;
 					return;
 				}
 
-				
 				string msg = (loopLimiter == LOOP_MAX) ?
 					msg = "A view couldn't find a context. Loop limit reached." :
 						msg = "A view was added with no context. Views must be added into the hierarchy of their ContextView lest all hell break loose.";
@@ -126,6 +177,8 @@ namespace strange.extensions.mediation.impl
 					MediationExceptionType.NO_CONTEXT);
 			}
 		}
+
+		public bool shouldRegister { get { return enabled && gameObject.activeInHierarchy; } }
 	}
 }
 

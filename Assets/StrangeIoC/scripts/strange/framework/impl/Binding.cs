@@ -28,8 +28,12 @@
  * <p>Resolver</p>
  * The resolver method (type Binder.BindingResolver) is a callback passed in to resolve
  * instantiation chains.
+ *
+ * Strange v0.7 adds Pools as an alternative form of SemiBinding. Pools can recycle groups of instances.
+ * Binding implements IPool to act as a facade on any Pool SemiBinding.
  * 
- * @see strange.framework.api.IBinding
+ * @see strange.framework.api.IBinding;
+ * @see strange.framework.api.IPool;
  * @see strange.framework.impl.Binder;
  */
 
@@ -43,63 +47,8 @@ namespace strange.framework.impl
 		public Binder.BindingResolver resolver;
 
 		protected ISemiBinding _key;
-		public object key
-		{ 
-			get
-			{
-				return _key.value;
-			}
-		}
 		protected ISemiBinding _value;
-		public object value
-		{ 
-			get
-			{
-				return _value.value;
-			}
-		}
 		protected ISemiBinding _name;
-		public object name
-		{ 
-			get
-			{
-				return (_name.value == null) ? BindingConst.NULLOID : _name.value;
-			}
-		}
-
-		public Enum keyConstraint
-		{ 
-			get
-			{
-				return _key.constraint;
-			}
-			set
-			{
-				_key.constraint = value;
-			}
-		}
-		public Enum valueConstraint
-		{ 
-			get
-			{
-				return _value.constraint;
-			}
-			set
-			{
-				_value.constraint = value;
-			}
-		}
-		public Enum nameConstraint
-		{ 
-			get
-			{
-				return _name.constraint;
-			}
-			set
-			{
-				_name.constraint = value;
-			}
-		}
 
 		public Binding(Binder.BindingResolver resolver)
 		{
@@ -118,13 +67,82 @@ namespace strange.framework.impl
 		{
 		}
 
-
-		virtual public IBinding Key<T>()
-		{
-			return Key (typeof(T));
+		#region IBinding implementation
+		public object key
+		{ 
+			get
+			{
+				return _key.value;
+			}
 		}
 
-		virtual public IBinding Key(object o)
+		public object value
+		{ 
+			get
+			{
+				return _value.value;
+			}
+		}
+
+		public object name
+		{ 
+			get
+			{
+				return (_name.value == null) ? BindingConst.NULLOID : _name.value;
+			}
+		}
+
+		public BindingConstraintType keyConstraint
+		{ 
+			get
+			{
+				return _key.constraint;
+			}
+			set
+			{
+				_key.constraint = value;
+			}
+		}
+
+		public BindingConstraintType valueConstraint
+		{ 
+			get
+			{
+				return _value.constraint;
+			}
+			set
+			{
+				_value.constraint = value;
+			}
+		}
+
+		public BindingConstraintType nameConstraint
+		{ 
+			get
+			{
+				return _name.constraint;
+			}
+			set
+			{
+				_name.constraint = value;
+			}
+		}
+
+		protected bool _isWeak = false;
+		public bool isWeak
+		{
+			get
+			{
+				return _isWeak;
+			}
+		}
+
+		virtual public IBinding Bind<T>()
+		{
+			return Bind (typeof(T));
+		}
+
+		virtual public IBinding Bind(object o)
 		{
 			_key.Add (o);
 			return this;
@@ -164,9 +182,7 @@ namespace strange.framework.impl
 
 		virtual public IBinding Named(object o)
 		{
-			if (_name.value == o)
-				return this;
-			return null;
+			return _name.value == o ? this : null;
 		}
 
 		virtual public void RemoveKey(object o)
@@ -183,5 +199,12 @@ namespace strange.framework.impl
 		{
 			_name.Remove (o);
 		}
+
+		virtual public IBinding Weak()
+		{
+			_isWeak = true;
+			return this;
+		}
+		#endregion
 	}
 }

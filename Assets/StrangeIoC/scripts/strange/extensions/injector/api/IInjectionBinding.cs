@@ -46,10 +46,11 @@
  */
 
 using System;
+using strange.framework.api;
 
 namespace strange.extensions.injector.api
 {
-	public interface IInjectionBinding
+	public interface IInjectionBinding : IBinding
 	{
 		/// Map the Binding to a Singleton so that every `GetInstance()` on the Binder Key returns the same imstance.
 		IInjectionBinding ToSingleton();
@@ -62,6 +63,21 @@ namespace strange.extensions.injector.api
 
 		/// Map the binding and give access to all contexts in hierarchy
 		IInjectionBinding CrossContext();
+
+		/// Get the list of promised supply types
+		object[] GetSupply();
+
+		/// Promise this Binding to any instance of Type <T>
+		IInjectionBinding SupplyTo<T>();
+
+		/// Promise this Binding to any instance of Type type
+		IInjectionBinding SupplyTo(Type type);
+
+		/// Remove the promise to supply this binding to Type <T>
+		IInjectionBinding Unsupply<T>();
+
+		/// Remove the promise to supply this binding to Type type
+		IInjectionBinding Unsupply(Type type);
 
 		bool isCrossContext { get; }
 
@@ -76,25 +92,25 @@ namespace strange.extensions.injector.api
 		InjectionBindingType type{get; set;}
 
 		/// Bind is the same as Key, but permits Binder syntax: `Bind<T>().Bind<T>()`
-		IInjectionBinding Bind<T>();
+		new IInjectionBinding Bind<T>();
 
 		/// Bind is the same as Key, but permits Binder syntax: `Bind<T>().Bind<T>()`
-		IInjectionBinding Bind(object key);
+		new IInjectionBinding Bind(object key);
 
-		IInjectionBinding Key<T>();
-		IInjectionBinding Key(object key);
-		IInjectionBinding To<T>();
-		IInjectionBinding To(object o);
-		IInjectionBinding ToName<T> ();
-		IInjectionBinding ToName (object o);
-		IInjectionBinding Named<T>();
-		IInjectionBinding Named(object o);
+		new IInjectionBinding To<T>();
+		new IInjectionBinding To(object o);
+		new IInjectionBinding ToName<T> ();
+		new IInjectionBinding ToName (object o);
+		new IInjectionBinding Named<T>();
+		new IInjectionBinding Named(object o);
 
-		object key{ get; }
-		object name{ get; }
-		object value{ get; }
-		Enum keyConstraint{ get; set;}
-		Enum valueConstraint{ get; set;}
+
+		new object key{ get; }
+		new object name{ get; }
+		new object value{ get; }
+		new BindingConstraintType keyConstraint{ get; set;}
+		new BindingConstraintType valueConstraint{ get; set;}
+
 	}
 }
 

@@ -33,13 +33,16 @@ namespace strange.extensions.injector.impl
 	{
 		private InjectionBindingType _type = InjectionBindingType.DEFAULT;
 		private bool _toInject = true;
-        private bool _isCrossContext = false;
+		private bool _isCrossContext = false;
+
+		private ISemiBinding supplyList = new SemiBinding ();
 
 		public InjectionBinding (Binder.BindingResolver resolver)
 		{
 			this.resolver = resolver;
 			keyConstraint = BindingConstraintType.MANY;
 			valueConstraint = BindingConstraintType.ONE;
+			supplyList.constraint = BindingConstraintType.MANY;
 		}
 
 		public InjectionBindingType type
@@ -60,6 +63,12 @@ namespace strange.extensions.injector.impl
 			{
 				return _toInject;
 			}
+		}
+
+		public IInjectionBinding ToInject(bool value)
+		{
+			_toInject = value;
+			return this;
 		}
 
 		public bool isCrossContext
@@ -103,7 +112,7 @@ namespace strange.extensions.injector.impl
 			{
 				object aKey = keys[a];
 				Type keyType = (aKey is Type) ? aKey as Type : aKey.GetType();
-				if (keyType.IsAssignableFrom(objType) == false)
+				if (keyType.IsAssignableFrom(objType) == false && (HasGenericAssignableFrom(keyType, objType) == false))
 				{
 					throw new InjectionException("Injection cannot bind a value that does not extend or implement the binding type.", InjectionExceptionType.ILLEGAL_BINDING_VALUE);
 				}
@@ -111,7 +120,35 @@ namespace strange.extensions.injector.impl
 			To(o);
 			return this;
 		}
-		
+
+		protected bool HasGenericAssignableFrom(Type keyType, Type objType)
+		{
+			//FIXME: We need to figure out how to determine generic assignability
+			if (keyType.IsGenericType == false)
+				return false;
+
+			return true;
+		}
+
+		protected bool IsGenericTypeAssignable(Type givenType, Type genericType)
+		{
+			var interfaceTypes = givenType.GetInterfaces();
+
+			foreach (var it in interfaceTypes)
+			{
+				if (it.IsGenericType && it.GetGenericTypeDefinition() == genericType)
+					return true;
+			}
+
+			if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType)
+				return true;
+
+			Type baseType = givenType.BaseType;
+			if (baseType == null) return false;
+
+			return IsGenericTypeAssignable(baseType, genericType);
+		}
+
 		public IInjectionBinding CrossContext()
 		{
 			_isCrossContext = true;
@@ -122,30 +159,49 @@ namespace strange.extensions.injector.impl
 			return this;
 		}
 
-		public IInjectionBinding ToInject(bool value)
+		/// Promise this Binding to any instance of Type <T>
+		public IInjectionBinding SupplyTo<T>()
 		{
-			_toInject = value;
+			return SupplyTo (typeof (T));
+		}
+
+		/// Promise this Binding to any instance of Type type
+		public IInjectionBinding SupplyTo(Type type)
+		{
+			supplyList.Add (type);
+			if (resolver != null)
+			{
+				resolver(this);
+			}
 			return this;
 		}
 
-		public IInjectionBinding Bind<T>()
+		/// Remove the promise to supply this binding to Type <T>
+		public IInjectionBinding Unsupply<T>()
 		{
-			return Key<T> ();
+			return Unsupply (typeof (T));
 		}
 
-		public IInjectionBinding Bind(object key)
+		/// Remove the promise to supply this binding to Type type
+		public IInjectionBinding Unsupply(Type type)
 		{
-			return Key (key);
+			supplyList.Remove (type);
+			return this;
 		}
 
-		new public IInjectionBinding Key<T>()
+		public object[] GetSupply()
 		{
-			return base.Key<T> () as IInjectionBinding;
+			return supplyList.value as object[];
 		}
 
-		new public IInjectionBinding Key(object key)
+		new public IInjectionBinding Bind<T>()
 		{
-			return base.Key (key) as IInjectionBinding;
+			return base.Bind<T> () as IInjectionBinding;
+		}
+
+		new public IInjectionBinding Bind(object key)
+		{
+			return base.Bind (key) as IInjectionBinding;
 		}
 
 		new public IInjectionBinding To<T>()
@@ -179,4 +235,3 @@ namespace strange.extensions.injector.impl
 		}
 	}
 }
-

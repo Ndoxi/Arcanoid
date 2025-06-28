@@ -7,6 +7,7 @@ using strange.extensions.injector.impl;
 
 using strange.framework.impl;
 using strange.extensions.command.api;
+using strange.framework.api;
 
 
 namespace strange.unittests
@@ -21,7 +22,7 @@ namespace strange.unittests
 		public void SetUp()
 		{
 			injectionBinder = new InjectionBinder();
-			injectionBinder.Bind<IInjectionBinder> ().ToValue (injectionBinder);
+			injectionBinder.Bind<IInjectionBinder> ().Bind<IInstanceProvider> ().ToValue (injectionBinder);
 			injectionBinder.Bind<ISequencer> ().Bind<ICommandBinder>().To<Sequencer> ().ToSingleton ();
 			sequencer = injectionBinder.GetInstance<ISequencer> () as ISequencer;
 		}
@@ -48,7 +49,7 @@ namespace strange.unittests
 			injectionBinder.Bind<ISimpleInterface>().To<SimpleInterfaceImplementer> ().ToSingleton();
 
 			//Bind the trigger to the command
-			sequencer.Bind(SomeEnum.ONE).To<SequenceCommandWithInjection>().To<SequenceCommandWithExecute>().To<SequenceCommandWithoutExecute>();
+			sequencer.Bind(SomeEnum.ONE).To<SequenceCommandWithInjection>().To<SequenceCommandWithExecute>().To<SequenceCommandThatThrows>();
 
 			TestDelegate testDelegate = delegate 
 			{
@@ -56,8 +57,8 @@ namespace strange.unittests
 			};
 
 			//That the exception is thrown demonstrates that the last command ran
-			SequencerException ex = Assert.Throws<SequencerException> (testDelegate);
-			Assert.AreEqual (ex.type, SequencerExceptionType.EXECUTE_OVERRIDE);
+			NotImplementedException ex = Assert.Throws<NotImplementedException> (testDelegate);
+			Assert.NotNull(ex);
 
 			//That the value is 100 demonstrates that the first command ran
 			ISimpleInterface instance = injectionBinder.GetInstance<ISimpleInterface>() as ISimpleInterface;
@@ -71,7 +72,7 @@ namespace strange.unittests
 			injectionBinder.Bind<ISimpleInterface>().To<SimpleInterfaceImplementer> ().ToSingleton();
 
 			//Bind the trigger to the command
-			sequencer.Bind(SomeEnum.ONE).To<SequenceCommandWithInjection>().To<SequenceInterruptingCommand>().To<SequenceCommandWithoutExecute>();
+			sequencer.Bind(SomeEnum.ONE).To<SequenceCommandWithInjection>().To<SequenceInterruptingCommand>().To<SequenceCommandThatThrows>();
 
 			TestDelegate testDelegate = delegate 
 			{

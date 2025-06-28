@@ -102,13 +102,10 @@ namespace strange.extensions.command.impl
 		}
 
 		/// Create a Command and bind its injectable parameters to the Signal types
-		protected ICommand createCommandForSignal(object cmd, object data, List<Type> signalTypes)
+		protected ICommand createCommandForSignal(Type cmd, object data, List<Type> signalTypes)
 		{
-			injectionBinder.Bind<ICommand>().To(cmd);
-			ICommand command = null;
 			if (data != null)
 			{
-
 				object[] signalData = (object[])data;
 
 				//Iterate each signal type, in order. 
@@ -151,19 +148,13 @@ namespace strange.extensions.command.impl
 							" in Command: " + cmd.GetType() + ". Only the first value of a type will be injected. You may want to place your values in a VO, instead.",
 							SignalExceptionType.COMMAND_VALUE_CONFLICT);
 					}
+				}
 			}
-			command = injectionBinder.GetInstance<ICommand>() as ICommand;
-			command.data = data; //Just to support swapping from EventCommand to SignalCommand more easily. No reason not to.
+			ICommand command = getCommand(cmd);
+			command.data = data;
 
 			foreach (Type typeToRemove in signalTypes) //clean up these bindings
 				injectionBinder.Unbind(typeToRemove);
-			}
-			else
-			{
-				command = injectionBinder.GetInstance<ICommand>() as ICommand;
-				command.data = data; //Just to support swapping from EventCommand to SignalCommand more easily. No reason not to.
-			}
-			injectionBinder.Unbind<ICommand>();
 			return command;
 		}
 
@@ -179,11 +170,28 @@ namespace strange.extensions.command.impl
 			return base.Bind(signal);
 		}
 
+		override public ICommandBinding Bind(object value)
+		{
+			IInjectionBinding binding = injectionBinder.GetBinding(value);
+			IBaseSignal signal = null;
+
+			if (value is Type)
+			{
+				if (binding == null) //If this isn't injected yet, inject a new one as a singleton
+				{
+					binding = injectionBinder.Bind (value) as IInjectionBinding;
+					binding.ToSingleton ();
+				}
+				signal = injectionBinder.GetInstance (value as Type) as IBaseSignal;
+			}
+			return base.Bind(signal ?? value);
+		}
+
 		/// <summary>Unbind by Signal Type</summary>
 		/// <exception cref="InjectionException">If there is no binding for this type.</exception>
 		public override void Unbind<T>()
 		{
-			ICommandBinding binding = (ICommandBinding) injectionBinder.GetBinding<T>();
+			ICommandBinding binding = GetBinding<T>();
 			if (binding != null)
 			{
 				T signal = (T) injectionBinder.GetInstance<T>(); 
@@ -201,6 +209,13 @@ namespace strange.extensions.command.impl
 				signal.RemoveListener(ReactTo); 
 			}
 			base.Unbind(key, name);
+		}
+
+		public override ICommandBinding GetBinding<T>()
+		{
+			//This should be a signal, see Bind<T> above
+			T signal = (T)injectionBinder.GetInstance<T>();
+			return base.GetBinding(signal) as ICommandBinding;
 		}
 	}
 }

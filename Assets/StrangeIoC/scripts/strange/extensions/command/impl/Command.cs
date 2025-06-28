@@ -33,13 +33,13 @@
  * has no effect on Commands operating in parallel.
  */
 
-using System;
 using strange.extensions.command.api;
 using strange.extensions.injector.api;
+using strange.extensions.pool.api;
 
 namespace strange.extensions.command.impl
 {
-	public class Command : ICommand
+	public abstract class Command : ICommand, IPoolable
 	{
 		/// Back reference to the CommandBinder that instantiated this Commmand
 		[Inject]
@@ -47,40 +47,48 @@ namespace strange.extensions.command.impl
 
 		/// The InjectionBinder for this Context
 		[Inject]
-		public IInjectionBinder injectionBinder{ get; set;}
+		public IInjectionBinder injectionBinder{ get; set; }
 
-		public object data{ get; set;}
+		public object data{ get; set; }
 
-		public bool cancelled{ get; set;}
+		public bool cancelled{ get; set; }
+
+		public bool IsClean{ get; set; }
 
 		public int sequenceId{ get; set; }
 
-		protected bool _retain = false;
-
 		public Command ()
 		{
+			//Set to false on construction to ensure that it's not double-injected on first use.
+			//The pool will satisfy all injections on first use. The CommandBinder re-injects
+			//every time the Command is recycled.
+			IsClean = false;
 		}
 
-		virtual public void Execute()
+		public abstract void Execute();
+
+		public virtual void Retain()
 		{
-			throw new CommandException ("You must override the Execute method in every Command", CommandExceptionType.EXECUTE_OVERRIDE);
+			retain = true;
 		}
 
-		public void Retain()
+		public virtual void Release()
 		{
-			_retain = true;
-		}
-
-		public void Release()
-		{
-			_retain = false;
+			retain = false;
 			if (commandBinder != null)
 			{
 				commandBinder.ReleaseCommand (this);
 			}
 		}
 
-		public void Fail()
+		/// Use/override this method to clean up the Command for recycling
+		virtual public void Restore()
+		{
+			injectionBinder.injector.Uninject (this);
+			IsClean = true;
+		}
+
+		public virtual void Fail()
 		{
 			if (commandBinder != null)
 			{
@@ -93,13 +101,7 @@ namespace strange.extensions.command.impl
 			cancelled = true;
 		}
 
-		public bool retain
-		{
-			get
-			{
-				return _retain;
-			}
-		}
+		public bool retain { get; set; }
 	}
 }
 

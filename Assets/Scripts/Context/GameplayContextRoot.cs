@@ -4,7 +4,7 @@ namespace App.Context
 {
     public class GameplayContextRoot : ContextView
     {
-        private void Start()
+        private void Awake()
         {
             context = new GameplayContext(this);
             context.Start();

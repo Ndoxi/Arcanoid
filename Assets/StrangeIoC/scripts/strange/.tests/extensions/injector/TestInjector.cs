@@ -43,6 +43,22 @@ namespace strange.unittests
 		}
 
 		[Test]
+		public void TestConstructorNamedInjection() 
+		{
+			ClassToBeInjected class1 = new ClassToBeInjected();
+			ClassToBeInjected class2 = new ClassToBeInjected();
+			
+			binder.Bind<ClassToBeInjected>().To(class1).ToName("First");
+			binder.Bind<ClassToBeInjected>().To(class2).ToName("Second");
+			binder.Bind<ConstructorNamedInjection>().To<ConstructorNamedInjection>();
+			var instance = binder.GetInstance<ConstructorNamedInjection>() as ConstructorNamedInjection;
+			
+			Assert.That(instance.first.GetType() == typeof(ClassToBeInjected) );
+			Assert.That(instance.second.GetType() == typeof(ClassToBeInjected) );
+			Assert.That(instance.first != instance.second);
+		}
+
+		[Test]
 		public void TestPostConstruct ()
 		{
 			binder.Bind<PostConstructClass> ().To<PostConstructClass> ();
@@ -76,6 +92,16 @@ namespace strange.unittests
 		}
 
 		[Test]
+		public void TestPostConstructOrdering()
+		{
+			binder.Bind<PostConstructSeveralOrdered> ().To<PostConstructSeveralOrdered> ();
+			PostConstructSeveralOrdered instance = binder.GetInstance<PostConstructSeveralOrdered> () as PostConstructSeveralOrdered;
+			Assert.IsNotNull (instance);
+			//Post-Constructs are ordered to spell this word
+			Assert.AreEqual ("ZAPHOD", instance.stringVal);
+		}
+
+		[Test]
 		public void TestNamedInstances ()
 		{
 			InjectableSuperClass testValue = new InjectableSuperClass ();
@@ -94,6 +120,22 @@ namespace strange.unittests
 			Assert.AreEqual (20, instance.injectionTwo.intValue);
 			Assert.That (instance.injectionOne.floatValue == defaultFloatValue);
 			Assert.That (instance.injectionTwo.floatValue == 3.14f);
+		}
+
+		[Test]
+		public void TestEmptyUntaggedConstructorNeverInvoked()
+		{
+			binder.Bind<int> ().ToValue (42);
+			binder.Bind<string> ().ToValue ("Zaphod");
+			binder.Bind<ISimpleInterface> ().To<SimpleInterfaceImplementer> ();
+			binder.Bind<MultipleConstructorsOneThreeFour> ().ToSingleton ();
+
+			TestDelegate testDelegate = delegate()
+			{
+				binder.GetInstance<MultipleConstructorsOneThreeFour>();
+			};
+
+			Assert.DoesNotThrow (testDelegate);
 		}
 
 		[Test]
@@ -140,6 +182,69 @@ namespace strange.unittests
 			};
 			InjectionException ex = Assert.Throws<InjectionException>(testDelegate);
 			Assert.That (ex.type == InjectionExceptionType.CIRCULAR_DEPENDENCY);
+		}
+
+		// ISSUE #45. This is a rather complex test which essentially validates that a Singleton is a Singleton,
+		// whether it's injected via constructor injection or property injection.
+		[Test]
+		public void TestConstructorAndSetterSingletonsAreSame()
+		{
+			binder.Bind<IMapConfig>().ToValue(new MapConfig());
+			binder.Bind<IMap>().To<Map>().ToSingleton();
+			binder.Bind<IRenderer>().To<Renderer>().ToSingleton();
+			binder.Bind<Phred> ().ToSingleton ();
+
+			var m = binder.GetInstance<IMap>() as IMap;
+			var m2 = binder.GetInstance<IMap>() as IMap;
+			var r = binder.GetInstance<IRenderer>() as IRenderer;
+			var p = binder.GetInstance<Phred>() as Phred;
+
+			Assert.AreSame (m, p.map);
+			Assert.AreSame (m, m2);
+			Assert.AreSame (m, r.map);
+		}
+	}
+
+	public interface IMapConfig
+	{}
+
+	public class MapConfig : IMapConfig
+	{}
+
+	public interface IMap
+	{
+	}
+
+	public class Map : IMap
+	{
+		public Map(IMapConfig config)
+		{
+			Console.WriteLine("Test map " + GetHashCode());
+		}
+	}
+
+	public interface IRenderer
+	{
+		IMap map {get;set;}
+	}
+
+	public class Renderer : IRenderer
+	{
+		public IMap map{get;set;} 
+
+		public Renderer(IMap map)
+		{
+			this.map = map;
+		}
+	}
+
+	public class Phred
+	{
+		[Inject]
+		public IMap map{get;set;} 
+
+		public Phred()
+		{
 		}
 	}
 }

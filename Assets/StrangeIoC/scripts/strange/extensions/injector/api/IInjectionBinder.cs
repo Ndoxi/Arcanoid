@@ -63,26 +63,21 @@ using strange.framework.api;
 
 namespace strange.extensions.injector.api
 {
-	public interface IInjectionBinder
+	public interface IInjectionBinder : IInstanceProvider
 	{
 		/// Get or set an Injector to use. By default, Injector instantiates it's own, but that can be overridden.
 		IInjector injector{ get; set;}
-
-		/// Retrieve an Instance based on the key.
-		/// ex. `injectionBinder.Get(typeof(ISomeInterface));`
-		object GetInstance(Type key);
 
 		/// Retrieve an Instance based on a key/name combo.
 		/// ex. `injectionBinder.Get(typeof(ISomeInterface), SomeEnum.MY_ENUM);`
 		object GetInstance(Type key, object name);
 
-		/// Retrieve an Instance based on the key.
-		/// ex. `injectionBinder.Get<cISomeInterface>();`
-		object GetInstance<T>();
-
 		/// Retrieve an Instance based on a key/name combo.
 		/// ex. `injectionBinder.Get<cISomeInterface>(SomeEnum.MY_ENUM);`
-		object GetInstance<T>(object name);
+		T GetInstance<T>(object name);
+
+		/// Get a binding bound to the injection Type and promised to the target Type
+		IInjectionBinding GetSupplier(Type injectionType, Type targetType);
 
 		/// Reflect all the types in the list
 		/// Return the number of types in the list, which should be equal to the list length
@@ -103,6 +98,14 @@ namespace strange.extensions.injector.api
 		/// will throw an error if there are any unresolved conflicts.
 		void ResolveBinding(IBinding binding, object key);
 
+		/// <summary>
+		/// Remove the supply binding for the specified injection Type T and target Type U.
+		void Unsupply<T, U>();
+
+		/// <summary>
+		/// Remove the supply binding for the specified injection Type and target Type.
+		void Unsupply(Type injectionType, Type targetType);
+
 		IInjectionBinding Bind<T>();
 		IInjectionBinding Bind(Type key);
 		IBinding Bind(object key);
@@ -115,6 +118,12 @@ namespace strange.extensions.injector.api
 		void Unbind (object key);
 		void Unbind (object key, object name);
 		void Unbind (IBinding binding);
+
+		/// For consumed bindings, provide a secure whitelist of legal bindings
+		void WhitelistBindings(List<object> list);
+
+		/// Provide the Binder with JSON data to perform dynamic runtime binding
+		void ConsumeBindings(string jsonString);
 	}
 }
 

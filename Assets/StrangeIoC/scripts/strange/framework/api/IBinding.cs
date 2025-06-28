@@ -49,11 +49,11 @@ namespace strange.framework.api
 		/**
 		 * Tie this binding to a Type key
 		 */
-		IBinding Key<T>();
+		IBinding Bind<T>();
 		/**
 		 * Tie this binding to a value key, such as a string or class instance
 		 */
-		IBinding Key(object key);
+		IBinding Bind(object key);
 
 		/**
 		 * Set the Binding's value to a Type
@@ -109,10 +109,17 @@ namespace strange.framework.api
 		object value{ get; }
 
 		/// Get or set a MANY or ONE constraint on the Key
-		Enum keyConstraint{ get; set;}
+		BindingConstraintType keyConstraint{ get; set;}
 
 		/// Get or set a MANY or ONE constraint on the Value
-		Enum valueConstraint{ get; set;}
+		BindingConstraintType valueConstraint{ get; set;}
+
+		//Mark a binding as weak, so that any new binding will override it
+		IBinding Weak();
+
+		//Get whether or not the binding is weak, default false
+		bool isWeak { get; }
+
 	}
 }
 

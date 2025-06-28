@@ -12,13 +12,15 @@ namespace App.Views
         [SerializeField] private RectTransform _childRoot;
         [SerializeField] private Button _playButton;
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             _playButton.onClick.AddListener(OnClick);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             _playButton.onClick.RemoveListener(OnClick);
         }
 

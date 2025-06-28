@@ -32,8 +32,11 @@ namespace strange.extensions.context.api
 {
 	public interface IContext : IBinder
 	{
-		/// Kick the context into action
+		/// Kicks off the internal Context binding/instantiation mechanisms 
 		IContext Start();
+
+		/// Fires ContextEvent.START (or the equivalent Signal) to launch the application
+		void Launch();
 		
 		/// Register a new context to this one
 		IContext AddContext(IContext context);
@@ -46,7 +49,13 @@ namespace strange.extensions.context.api
 		
 		/// Remove a view from this context
 		void RemoveView(object view);
-		
+
+		/// Enables a view in this context
+		void EnableView(object view);
+
+		/// Disables a view in this context
+		void DisableView(object view);
+
 		/// Get the ContextView
 		object GetContextView();
 

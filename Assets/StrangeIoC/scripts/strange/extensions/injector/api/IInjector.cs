@@ -49,13 +49,21 @@ namespace strange.extensions.injector.api
 	{
 		/// Request an instantiation based on the given binding.
 		/// This request is made to the Injector, but it's really the InjectorFactory that does the instantiation.
-		object Instantiate (IInjectionBinding binding);
+		object Instantiate (IInjectionBinding binding, bool tryInjectHere);
+
+		//Attempt to inject based on binding setting
+		object TryInject(IInjectionBinding binding, object target);
 
 		/// Request that the provided target be injected.
 		object Inject(object target);
 
 		/// Request that the provided target be injected.
 		object Inject(object target, bool attemptConstructorInjection);
+
+		/// Clear the injections from the provided instance.
+		/// Note that Uninject can only clean public properties...therefore only
+		/// setters will be uninjected...not injections provided via constructor injection
+		void Uninject(object target);
 
 		/// Get/set an InjectorFactory.
 		IInjectorFactory factory{ get; set;}

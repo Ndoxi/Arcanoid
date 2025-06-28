@@ -4,7 +4,7 @@ namespace App.Context
 {
     public class MenuContextRoot : ContextView
     {
-        private void Start()
+        private void Awake()
         {
             context = new MenuContext(this);
             context.Start();

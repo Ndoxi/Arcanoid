@@ -23,12 +23,13 @@
  * and caches the result, meaning that Reflection is performed only once per class.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Reflection;
 using strange.extensions.reflector.api;
 using strange.framework.api;
-using strange.framework.impl;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace strange.extensions.reflector.impl
 {
@@ -52,16 +53,16 @@ namespace strange.extensions.reflector.impl
 				binding = GetRawBinding ();
 				IReflectedClass reflected = new ReflectedClass ();
 				mapPreferredConstructor (reflected, binding, type);
-				mapPostConstructors (reflected, binding, type);
-				mapSetters (reflected, binding, type);
-				binding.Key (type).To (reflected);
+				mapSetters (reflected, binding, type); //map setters before mapping methods
+				mapMethods (reflected, binding, type); 
+				binding.Bind (type).To (reflected);
 				retv = binding.value as IReflectedClass;
-				retv.preGenerated = false;
+				retv.PreGenerated = false;
 			}
 			else
 			{
 				retv = binding.value as IReflectedClass;
-				retv.preGenerated = true;
+				retv.PreGenerated = true;
 			}
 			return retv;
 		}
@@ -84,15 +85,23 @@ namespace strange.extensions.reflector.impl
 
 
 			Type[] paramList = new Type[parameters.Length];
+			object[] names = new object[parameters.Length];
 			int i = 0;
 			foreach (ParameterInfo param in parameters)
 			{
 				Type paramType = param.ParameterType;
 				paramList [i] = paramType;
+
+				object[] attributes = param.GetCustomAttributes(typeof(Name), false);
+				if (attributes.Length > 0) 
+				{
+					names[i] = ( (Name)attributes[0]).name;
+				}
 				i++;
 			}
-			reflected.constructor = constructor;
-			reflected.constructorParameters = paramList;
+			reflected.Constructor = constructor;
+			reflected.ConstructorParameters = paramList;
+			reflected.ConstructorParameterNames = names;
 		}
 
 		//Look for a constructor in the order:
@@ -102,9 +111,9 @@ namespace strange.extensions.reflector.impl
 		private ConstructorInfo findPreferredConstructor(Type type)
 		{
 			ConstructorInfo[] constructors = type.GetConstructors(BindingFlags.FlattenHierarchy | 
-			                                                            BindingFlags.Public | 
-			                                                            BindingFlags.Instance |
-			                                                            BindingFlags.InvokeMethod);
+																	BindingFlags.Public | 
+																	BindingFlags.Instance |
+																	BindingFlags.InvokeMethod);
 			if (constructors.Length == 1)
 			{
 				return constructors [0];
@@ -129,39 +138,66 @@ namespace strange.extensions.reflector.impl
 			return shortestConstructor;
 		}
 
-		private void mapPostConstructors(IReflectedClass reflected, IBinding binding, Type type)
+		private void mapMethods(IReflectedClass reflected, IBinding binding, Type type)
 		{
-			MethodInfo[] postConstructors = new MethodInfo[0];
 			MethodInfo[] methods = type.GetMethods(BindingFlags.FlattenHierarchy | 
-			                                             BindingFlags.Public | 
-			                                             BindingFlags.Instance |
-			                                             BindingFlags.InvokeMethod);
+														 BindingFlags.Public |
+														 BindingFlags.NonPublic |
+														 BindingFlags.Instance |
+														 BindingFlags.InvokeMethod);
+			ArrayList methodList = new ArrayList ();
+			List<KeyValuePair<MethodInfo, Attribute>> attrMethods = new List<KeyValuePair<MethodInfo, Attribute>>();
 			foreach (MethodInfo method in methods)
 			{
-				object[] tagged = method.GetCustomAttributes(typeof(PostConstruct), true);
+				object[] tagged = method.GetCustomAttributes (typeof(PostConstruct), true);
 				if (tagged.Length > 0)
 				{
-					MethodInfo[] tempList = postConstructors;
-					int len = tempList.Length;
-					postConstructors = new MethodInfo[len + 1];
-					tempList.CopyTo (postConstructors, 0);
-					postConstructors [len] = method;
+					methodList.Add (method);
+					attrMethods.Add(new KeyValuePair<MethodInfo, Attribute>(method, (Attribute) tagged[0]));
+				}
+				object[] listensToAttr = method.GetCustomAttributes(typeof (ListensTo), true);
+				if (listensToAttr.Length > 0)
+				{
+
+					for (int i = 0; i < listensToAttr.Length; i++)
+					{
+						attrMethods.Add(new KeyValuePair<MethodInfo, Attribute>(method, (ListensTo) listensToAttr[i]));
+					}
 				}
 			}
-			reflected.postConstructors = postConstructors;
+
+			methodList.Sort (new PriorityComparer ());
+			reflected.postConstructors = (MethodInfo[])methodList.ToArray(typeof(MethodInfo));
+			reflected.attrMethods = attrMethods.ToArray();
 		}
 
 		private void mapSetters(IReflectedClass reflected, IBinding binding, Type type)
 		{
-			KeyValuePair<Type, PropertyInfo>[] pairs = new KeyValuePair<Type, PropertyInfo>[0];
-			object[] names = new object[0];
+			MemberInfo[] privateMembers = type.FindMembers(MemberTypes.Property,
+													BindingFlags.FlattenHierarchy |
+													BindingFlags.SetProperty |
+													BindingFlags.NonPublic |
+													BindingFlags.Instance,
+													null, null);
+			foreach (MemberInfo member in privateMembers)
+			{
+				object[] injections = member.GetCustomAttributes(typeof(Inject), true);
+				if (injections.Length > 0)
+				{
+					throw new ReflectionException ("The class " + type.Name + " has a non-public Injection setter " + member.Name + ". Make the setter public to allow injection.", ReflectionExceptionType.CANNOT_INJECT_INTO_NONPUBLIC_SETTER);
+				}
+			}
 
 			MemberInfo[] members = type.FindMembers(MemberTypes.Property,
-			                                              BindingFlags.FlattenHierarchy | 
-			                                              BindingFlags.SetProperty | 
-			                                              BindingFlags.Public | 
-			                                              BindingFlags.Instance, 
-			                                              null, null);
+														  BindingFlags.FlattenHierarchy |
+														  BindingFlags.SetProperty |
+														  BindingFlags.Public |
+														  BindingFlags.Instance,
+														  null, null);
+
+			//propertyinfo.name to reflectedattribute
+			//This is to test for 'hidden' or overridden injections.
+			Dictionary<String, ReflectedAttribute> namedAttributes = new Dictionary<string, ReflectedAttribute>();
 
 			foreach (MemberInfo member in members)
 			{
@@ -170,42 +206,40 @@ namespace strange.extensions.reflector.impl
 				{
 					Inject attr = injections [0] as Inject;
 					PropertyInfo point = member as PropertyInfo;
-					Type pointType = point.PropertyType;
-					KeyValuePair<Type, PropertyInfo> pair = new KeyValuePair<Type, PropertyInfo> (pointType, point);
-					pairs = AddKV (pair, pairs);
+					Type baseType = member.DeclaringType.BaseType;
+					bool hasInheritedProperty = baseType != null ? baseType.GetProperties().Any(p => p.Name == point.Name) : false;
+					bool toAddOrOverride = true; //add or override by default
 
-					object bindingName = attr.name;
-					names = Add (bindingName, names);
+					//if we have an overriding value, we need to know whether to override or leave it out.
+					//We leave out the base if it's hidden
+					//And we add if its overriding.
+					if (namedAttributes.ContainsKey(point.Name))
+						toAddOrOverride = hasInheritedProperty; //if this attribute has been 'hidden' by a new or override keyword, we should not add this.
+
+					if (toAddOrOverride)
+						namedAttributes[point.Name] = new ReflectedAttribute(point.PropertyType, point, attr.name);
 				}
 			}
-			reflected.setters = pairs;
-			reflected.setterNames = names;
+			reflected.Setters = namedAttributes.Values.ToArray();
+		}
+	}
+
+	class PriorityComparer : IComparer
+	{
+		int IComparer.Compare( Object x, Object y )
+		{
+
+			int pX = getPriority (x as MethodInfo);
+			int pY = getPriority (y as MethodInfo);
+
+			return (pX < pY) ? -1 : (pX == pY) ? 0 : 1;
 		}
 
-		/**
-		 * Add an item to a list
-		 */
-		private object[] Add(object value, object[] list)
+		private int getPriority(MethodInfo methodInfo)
 		{
-			object[] tempList = list;
-			int len = tempList.Length;
-			list = new object[len + 1];
-			tempList.CopyTo (list, 0);
-			list [len] = value;
-			return list;
-		}
-
-		/**
-		 * Add an item to a list
-		 */
-		private  KeyValuePair<Type,PropertyInfo>[] AddKV(KeyValuePair<Type,PropertyInfo> value, KeyValuePair<Type,PropertyInfo>[] list)
-		{
-			KeyValuePair<Type,PropertyInfo>[] tempList = list;
-			int len = tempList.Length;
-			list = new KeyValuePair<Type,PropertyInfo>[len + 1];
-			tempList.CopyTo (list, 0);
-			list [len] = value;
-			return list;
+			PostConstruct attr = methodInfo.GetCustomAttributes(true) [0] as PostConstruct;
+			int priority = attr.priority;
+			return priority;
 		}
 	}
 }

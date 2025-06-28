@@ -24,22 +24,37 @@
  * values.
  */
 
-using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using strange.extensions.reflector.api;
+using System;
+using System.Reflection;
 
 namespace strange.extensions.reflector.impl
 {
 	public class ReflectedClass : IReflectedClass
 	{
-		public ConstructorInfo constructor{ get; set;}
-		public Type[] constructorParameters{ get; set;}
-		public MethodInfo[] postConstructors{ get; set;}
-		public KeyValuePair<Type, PropertyInfo>[] setters{ get; set;}
-		public object[] setterNames{ get; set;}
+		public ConstructorInfo Constructor{ get; set;}
+		public Type[] ConstructorParameters{ get; set;}
+		public object[] ConstructorParameterNames { get; set; }
+		public MethodInfo[] PostConstructors{ get; set;}
+		public ReflectedAttribute[] Setters { get; set; }
+		public object[] SetterNames{ get; set;}
+		public bool PreGenerated{ get; set;}
 
-		public bool preGenerated{ get; set;}
+
+		/// [Obsolete"Strange migration to conform to C# guidelines. Removing camelCased publics"]
+		public ConstructorInfo constructor{ get { return Constructor; } set { Constructor = value; }}
+		public Type[] constructorParameters{ get { return ConstructorParameters; } set { ConstructorParameters = value; }}
+		public MethodInfo[] postConstructors{ get { return PostConstructors; } set { PostConstructors = value; }}
+		public KeyValuePair<MethodInfo, Attribute>[] attrMethods { get; set; }
+		public bool preGenerated{ get { return PreGenerated; } set { PreGenerated = value; }}
+
+
+		public bool hasSetterFor(Type type)
+		{
+		    return Setters.Any(attr => attr.type == type);
+		}
 	}
 }
 

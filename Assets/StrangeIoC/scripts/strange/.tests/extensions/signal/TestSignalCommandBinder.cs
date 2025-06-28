@@ -6,6 +6,7 @@ using strange.extensions.command.impl;
 using strange.extensions.command.api;
 using strange.extensions.signal.impl;
 using strange.extensions.signal.api;
+using strange.framework.api;
 
 namespace strange.unittests
 {
@@ -21,7 +22,7 @@ namespace strange.unittests
         public void SetUp()
         {
             injectionBinder = new InjectionBinder();
-            injectionBinder.Bind<IInjectionBinder>().ToValue(injectionBinder);
+			injectionBinder.Bind<IInjectionBinder>().Bind<IInstanceProvider>().ToValue(injectionBinder);
             injectionBinder.Bind<ICommandBinder>().To<SignalCommandBinder>().ToSingleton();
             commandBinder = injectionBinder.GetInstance<ICommandBinder>() as ICommandBinder;
             injectionBinder.Bind<TestModel>().ToSingleton();
@@ -38,6 +39,47 @@ namespace strange.unittests
             NoArgSignal signal = injectionBinder.GetInstance<NoArgSignal>() as NoArgSignal;
             signal.Dispatch();
             Assert.AreEqual(testModel.StoredValue, 1);
+        }
+
+	    [Test]
+	    public void TestUnbind()
+	    {
+            commandBinder.Bind<NoArgSignal>().To<NoArgSignalCommand>();
+            TestModel testModel = injectionBinder.GetInstance<TestModel>() as TestModel;
+            Assert.AreEqual(testModel.StoredValue, 0);
+
+            NoArgSignal signal = injectionBinder.GetInstance<NoArgSignal>() as NoArgSignal;
+            signal.Dispatch();
+            Assert.AreEqual(testModel.StoredValue, 1);
+
+            commandBinder.Unbind<NoArgSignal>();
+            signal.Dispatch();
+            Assert.AreEqual(testModel.StoredValue, 1); //Should do nothing
+        }
+
+        [Test]
+        public void TestUnbindWithoutUsage()
+        {
+            commandBinder.Bind<NoArgSignal>().To<NoArgSignalCommand>();
+            TestModel testModel = injectionBinder.GetInstance<TestModel>() as TestModel;
+            Assert.AreEqual(testModel.StoredValue, 0);
+
+            commandBinder.Unbind<NoArgSignal>();
+
+            NoArgSignal signal = injectionBinder.GetInstance<NoArgSignal>() as NoArgSignal;
+            signal.Dispatch();
+            Assert.AreEqual(testModel.StoredValue, 0); //Should do nothing
+        }
+
+        [Test]
+	    public void TestUnbindNonexistentThrows()
+	    {
+            TestDelegate testDelegate = delegate
+            {
+	            commandBinder.Unbind<NoArgSignal>();
+            };
+            InjectionException ex = Assert.Throws<InjectionException>(testDelegate);
+            Assert.AreEqual(ex.type, InjectionExceptionType.NULL_BINDING);
         }
 
 
@@ -75,6 +117,20 @@ namespace strange.unittests
             Assert.AreEqual(1, testModel.StoredValue); //first command gives 1, second gives 2
             Assert.AreEqual(2, testModel.SecondaryValue); //first command gives 1, second gives 2
         }
+
+		[Test]
+		public void TestMultipleOfSame()
+		{
+			commandBinder.Bind<NoArgSignal>().To<NoArgSignalCommand>().To<NoArgSignalCommand>();
+
+			TestModel testModel = injectionBinder.GetInstance<TestModel>() as TestModel;
+
+			Assert.AreEqual(0, testModel.StoredValue);
+			NoArgSignal signal = injectionBinder.GetInstance<NoArgSignal>() as NoArgSignal;
+
+			signal.Dispatch();
+			Assert.AreEqual(2, testModel.StoredValue); //first command gives 1, second gives 2
+		}
 
 
         [Test]
@@ -140,7 +196,7 @@ namespace strange.unittests
             injectionBinder.Bind<ISimpleInterface>().To<SimpleInterfaceImplementer>().ToSingleton();
 
             //Bind the trigger to the command
-            commandBinder.Bind<NoArgSignal>().To<CommandWithInjection>().To<CommandWithExecute>().To<CommandWithoutExecute>().InSequence();
+            commandBinder.Bind<NoArgSignal>().To<CommandWithInjection>().To<CommandWithExecute>().To<CommandThatThrows>().InSequence();
 
             TestDelegate testDelegate = delegate
             {
@@ -149,8 +205,8 @@ namespace strange.unittests
             };
 
             //That the exception is thrown demonstrates that the last command ran
-            CommandException ex = Assert.Throws<CommandException>(testDelegate);
-            Assert.AreEqual(ex.type, CommandExceptionType.EXECUTE_OVERRIDE);
+            NotImplementedException ex = Assert.Throws<NotImplementedException>(testDelegate);
+            Assert.NotNull(ex);
 
             //That the value is 100 demonstrates that the first command ran
             ISimpleInterface instance = injectionBinder.GetInstance<ISimpleInterface>() as ISimpleInterface;
@@ -184,10 +240,10 @@ namespace strange.unittests
         public void TestInterruptedSequence()
         {
             //CommandWithInjection requires an ISimpleInterface
-            injectionBinder.Bind<ISimpleInterface>().To<SimpleInterfaceImplementer>().ToSingleton();
+			injectionBinder.Bind<ISimpleInterface>().To<SimpleInterfaceImplementer>().ToSingleton();
 
             //Bind the trigger to the command
-            commandBinder.Bind <NoArgSignal>().To<CommandWithInjection>().To<FailCommand>().To<CommandWithoutExecute>().InSequence();
+            commandBinder.Bind <NoArgSignal>().To<CommandWithInjection>().To<FailCommand>().To<CommandThatThrows>().InSequence();
 
             TestDelegate testDelegate = delegate
             {
@@ -201,7 +257,26 @@ namespace strange.unittests
             //That the value is 100 demonstrates that the first command ran
             ISimpleInterface instance = injectionBinder.GetInstance<ISimpleInterface>() as ISimpleInterface;
             Assert.AreEqual(100, instance.intValue);
-        }
+		}
+
+
+		[Test]
+		public void TestSimpleRuntimeSignalCommandBinding()
+		{
+			injectionBinder.Bind<ExposedTestModel>().ToSingleton();
+
+			string jsonCommandString = "[{\"Bind\":\"strange.unittests.ExposedOneArgSignal\",\"To\":[\"strange.unittests.ExposedOneArgSignalCommand\"]}]";
+			commandBinder.ConsumeBindings (jsonCommandString);
+
+			ExposedTestModel testModel = injectionBinder.GetInstance<ExposedTestModel>() as ExposedTestModel;
+
+			Assert.AreEqual(0, testModel.StoredValue);
+			ExposedOneArgSignal signal = injectionBinder.GetInstance<ExposedOneArgSignal>() as ExposedOneArgSignal;
+
+			int injectedValue = 100;
+			signal.Dispatch(injectedValue);
+			Assert.AreEqual(injectedValue, testModel.StoredValue);
+		}
 
 
         class TestModel
@@ -323,5 +398,27 @@ namespace strange.unittests
         {
             public TestPassedException(string str) : base(str) { }
         }
+	}
+
+	public class ExposedTestModel
+	{
+		public int StoredValue = 0;
+		public int SecondaryValue = 0;
+	}
+
+	public class ExposedOneArgSignal : Signal<int> { }
+
+	public class ExposedOneArgSignalCommand : Command
+	{
+		[Inject]
+		public int injectedValue { get; set; }
+
+		[Inject]
+		public ExposedTestModel TestModel { get; set; }
+
+		public override void Execute()
+		{
+			TestModel.StoredValue += injectedValue;
+		}
 	}
 }
