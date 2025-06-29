@@ -1,6 +1,8 @@
 ﻿using App.Commands;
 using App.Gameplay;
+using App.Mediators;
 using App.Signals;
+using App.Views;
 using System;
 using UnityEngine;
 
@@ -16,6 +18,7 @@ namespace App.Context
 
             BindSignals();
             BindCommands();
+            mediationBinder.Bind<GameplayView>().To<GameplayMediator>();
         }
 
         private void BindSignals()
@@ -32,6 +35,8 @@ namespace App.Context
             commandBinder.Bind<BrickDestroyedSignal>().To<UpdateBricksCountCommand>();
             commandBinder.Bind<BallDestroyedSignal>().To<UpdateBallsCountCommand>();
             commandBinder.Bind<CompleteLevelSignal>().To<FinalizeLevelCommand>();
+            commandBinder.Bind<RequestPauseSignal>().To<PauseGameCommand>();
+            commandBinder.Bind<RequestResumeSignal>().To<ResumeGameCommand>();
         }
     }
 }

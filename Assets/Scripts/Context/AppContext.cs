@@ -52,6 +52,10 @@ namespace App.Context
             injectionBinder.Bind<LevelLoadedSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<LevelUnloadedSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<CompleteLevelSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<PauseSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<RequestPauseSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<ResumeSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<RequestResumeSignal>().ToSingleton().CrossContext();
         }
 
         private void BindAppStateMachine()

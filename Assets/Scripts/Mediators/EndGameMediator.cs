@@ -17,7 +17,7 @@ namespace App.Mediators
         {
             base.OnRegister();
 
-            View.Hide();
+            HideView();
 
             View.OnTryAgain += TryAgain;
             View.OnBackClick += ReturnToMainMenu;

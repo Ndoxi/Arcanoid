@@ -4,23 +4,45 @@ using UnityEngine;
 namespace App.Gameplay.Controllers
 {
     [RequireComponent(typeof(Rigidbody2D))]
-    public class PaddleController : MonoBehaviour
+    public class PaddleController : MonoBehaviour, IPausable
     {
         [Inject] public IInputReader InputReader { get; private set; }
+        [Inject] public IPauseService PauseService { get; private set; }
+
         [SerializeField] private Transform _ballPosition;
         [SerializeField] private float _speed;
         [SerializeField] private float _clampX;
 
         private Rigidbody2D _rigidbody;
         private BallController _currentBall;
+        private bool _enableInput = true;
 
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody2D>();
         }
 
+        private void OnEnable()
+        {
+            PauseService?.Register(this);
+        }
+
+        private void Start()
+        {
+            PauseService.Unregister(this);
+            PauseService.Register(this);
+        }
+
+        private void OnDisable()
+        {
+            PauseService.Unregister(this);
+        }
+
         private void Update()
         {
+            if (!_enableInput)
+                return;
+
             float movementInput = InputReader.GetMovement();
             if (!Mathf.Approximately(movementInput, 0f))
                 ProcessMovement(movementInput, Time.deltaTime);
@@ -52,6 +74,16 @@ namespace App.Gameplay.Controllers
 
             _currentBall.Launch();
             _currentBall = null;
+        }
+
+        public void Pause()
+        {
+            _enableInput = false;
+        }
+
+        public void Resume()
+        {
+            _enableInput = true;
         }
     }
 }

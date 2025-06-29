@@ -5,14 +5,17 @@ using UnityEngine;
 namespace App.Gameplay.Controllers
 {
     [RequireComponent(typeof(Rigidbody2D), typeof(BrickCollisionDetector2D))]
-    public class BallController : MonoBehaviour
+    public class BallController : MonoBehaviour, IPausable
     {
         [Inject] public BallDestroyedSignal BallDestroyedSignal { get; private set; }
+        [Inject] public IPauseService PauseService { get; private set; }
+
         [SerializeField] private float _speed;
 
         private Rigidbody2D _rigidbody;
         private BrickCollisionDetector2D _collisionDetector;
         private bool _state = true;
+        private bool _stateBeforePause;
         private Vector2 _currentDirection;
 
         private void Awake()
@@ -24,11 +27,19 @@ namespace App.Gameplay.Controllers
         private void OnEnable()
         {
             _collisionDetector.OnEnter += OnHitBrick;
+            PauseService?.Register(this);
+        }
+
+        private void Start()
+        {
+            PauseService.Unregister(this);
+            PauseService.Register(this);
         }
 
         private void OnDisable()
         {
             _collisionDetector.OnEnter -= OnHitBrick;
+            PauseService.Unregister(this);
         }
 
         public void Launch()
@@ -94,6 +105,17 @@ namespace App.Gameplay.Controllers
             currentDirection = Quaternion.Euler(0, 0, randomDeviation) * currentDirection;
 
             return currentDirection;
+        }
+
+        public void Pause()
+        {
+            _stateBeforePause = _state;
+            SetStateInternal(false);
+        }
+
+        public void Resume()
+        {
+            SetStateInternal(_stateBeforePause);
         }
     }
 }
