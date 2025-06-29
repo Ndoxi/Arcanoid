@@ -4,6 +4,5 @@
     {
         float GetMovement();
         bool LaunchPressed();
-        bool PausePressed();
     }
 }

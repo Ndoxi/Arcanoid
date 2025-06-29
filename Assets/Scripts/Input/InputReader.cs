@@ -17,10 +17,5 @@ namespace App.Input
         {
             return UnityEngine.Input.GetKeyUp(LaunchKey);
         }
-
-        public bool PausePressed()
-        {
-            return UnityEngine.Input.GetKeyUp(PauseKey);
-        }
     }
 }
