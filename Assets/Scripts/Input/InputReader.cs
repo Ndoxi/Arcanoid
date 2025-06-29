@@ -6,7 +6,8 @@ namespace App.Input
     {
         private const string MovementAxisName = "Horizontal";
         private const KeyCode LaunchKey = KeyCode.Space;
-        private const KeyCode PauseKey = KeyCode.Escape;
+        private const KeyCode PauseKey1 = KeyCode.Escape;
+        private const KeyCode PauseKey2 = KeyCode.Backspace;
 
         public float GetMovement()
         {
@@ -16,6 +17,12 @@ namespace App.Input
         public bool LaunchPressed()
         {
             return UnityEngine.Input.GetKeyUp(LaunchKey);
+        }
+
+        public bool PausePressed()
+        {
+            return UnityEngine.Input.GetKeyUp(PauseKey1) 
+                   || UnityEngine.Input.GetKeyUp(PauseKey2);
         }
     }
 }

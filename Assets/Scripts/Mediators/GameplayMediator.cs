@@ -1,6 +1,7 @@
 ﻿using App.Views;
 using App.Signals;
 using strange.extensions.mediation.impl;
+using System;
 
 namespace App.Mediators
 {
@@ -9,7 +10,8 @@ namespace App.Mediators
         [Inject] public GameplayView View { get; private set; }
         [Inject] public RequestPauseSignal RequestPauseSignal { get; private set; }
         [Inject] public LevelLoadedSignal LevelLoadedSignal { get; private set; }
-
+        [Inject] public GameplayEnteredSignal GameplayEnteredSignal { get; private set; }
+        [Inject] public GameplayExitedSignal GameplayExitedSignal { get; private set; }
 
         public override void OnRegister()
         {
@@ -17,6 +19,8 @@ namespace App.Mediators
 
             View.OnPauseClick += EnterPause;
             LevelLoadedSignal.AddListener(ShowTooltip);
+            GameplayEnteredSignal.AddListener(SetFocused);
+            GameplayExitedSignal.AddListener(SetUnfocused);
         }
 
         public override void OnRemove()
@@ -25,6 +29,8 @@ namespace App.Mediators
 
             View.OnPauseClick -= EnterPause;
             LevelLoadedSignal.RemoveListener(ShowTooltip);
+            GameplayEnteredSignal.RemoveListener(SetFocused);
+            GameplayExitedSignal.RemoveListener(SetUnfocused);
         }
 
         private void EnterPause()
@@ -35,6 +41,16 @@ namespace App.Mediators
         private void ShowTooltip()
         {
             View.ShowTooltip();
+        }
+
+        private void SetFocused()
+        {
+            View.Focused = true;
+        }
+
+        private void SetUnfocused()
+        {
+            View.Focused = false;
         }
     }
 }

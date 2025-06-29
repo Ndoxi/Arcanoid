@@ -1,4 +1,5 @@
-﻿using strange.extensions.mediation.impl;
+﻿using App.Input;
+using strange.extensions.mediation.impl;
 using System;
 using System.Collections;
 using UnityEngine;
@@ -9,6 +10,9 @@ namespace App.Views
     public class GameplayView : View
     {
         public event Action OnPauseClick;
+
+        public bool Focused { get; set; }
+        [Inject] public IInputReader InputReader { get; private set; } 
 
         [SerializeField] private Button _pauseButton;
         [SerializeField] private RectTransform _controlsTooltip;
@@ -28,6 +32,12 @@ namespace App.Views
             base.OnDisable();
 
             _pauseButton.onClick.RemoveListener(PauseGame);
+        }
+
+        private void Update()
+        {
+            if (Focused && InputReader.PausePressed())
+                OnPauseClick?.Invoke();
         }
 
         private void PauseGame()

@@ -47,6 +47,8 @@ namespace App.Context
             injectionBinder.Bind<MainMenuEnteredSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<ExitMainMenuSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<MainMenuExitedSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<GameplayEnteredSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<GameplayExitedSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<LoadLevelSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<UnloadLevelSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<LevelLoadedSignal>().ToSingleton().CrossContext();
