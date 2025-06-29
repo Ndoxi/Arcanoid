@@ -15,7 +15,7 @@ namespace App.Context
             base.mapBindings();
 
             mediationBinder.Bind<MainMenuView>().To<MainMenuMediator>();
-            commandBinder.Bind<ExitMainMenuSignal>().To<StartGameplayCommand>();
+            commandBinder.Bind<LoadMainMenuSignal>().To<EnterMainMenuCommand>();
         }
     }
 }

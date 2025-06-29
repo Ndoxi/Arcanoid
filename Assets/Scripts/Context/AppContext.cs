@@ -5,6 +5,8 @@ using App.StateMachines;
 using System;
 using App.LevelBuilder;
 using App.ResourcesLoaders;
+using App.Input;
+using App.Gameplay;
 
 namespace App.Context
 {
@@ -18,9 +20,11 @@ namespace App.Context
 
             BindResourcesLoader();
             BindSignals();
+            BindProgressTracker();
             BindLevelBuilder();
             BindAppStateMachine();
             BindCommands();
+            BindInputReader();
         }
 
         public override void Launch()
@@ -39,11 +43,15 @@ namespace App.Context
         private void BindSignals()
         {
             injectionBinder.Bind<AppStartSignal>().ToSingleton().CrossContext(); 
+            injectionBinder.Bind<LoadMainMenuSignal>().ToSingleton().CrossContext(); 
             injectionBinder.Bind<MainMenuEnteredSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<ExitMainMenuSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<MainMenuExitedSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<LoadLevelSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<UnloadLevelSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<LevelLoadedSignal>().ToSingleton().CrossContext();
             injectionBinder.Bind<LevelUnloadedSignal>().ToSingleton().CrossContext();
+            injectionBinder.Bind<CompleteLevelSignal>().ToSingleton().CrossContext();
         }
 
         private void BindAppStateMachine()
@@ -60,12 +68,21 @@ namespace App.Context
         private void BindCommands()
         {
             commandBinder.Bind<AppStartSignal>().To<EnterMainMenuCommand>().Once();
-            commandBinder.Bind<MainMenuExitedSignal>().To<LoadLevelCommand>();
+        }
+
+        private void BindProgressTracker()
+        {
+            injectionBinder.Bind<LevelProgressTracker>().To<LevelProgressTracker>().ToSingleton().CrossContext();
         }
 
         private void BindLevelBuilder()
         {
-            injectionBinder.Bind<ILevelBuilder>().To<Builder>().ToSingleton();
+            injectionBinder.Bind<ILevelBuilder>().To<Builder>().ToSingleton().CrossContext();
+        }
+
+        private void BindInputReader()
+        {
+            injectionBinder.Bind<IInputReader>().To<InputReader>().ToSingleton().CrossContext();
         }
     }
 }

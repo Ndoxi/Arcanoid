@@ -7,7 +7,10 @@ namespace App.Gameplay.Controllers
     public class PaddleController : MonoBehaviour
     {
         [Inject] public IInputReader InputReader { get; private set; }
+        [SerializeField] private Transform _ballPosition;
         [SerializeField] private float _speed;
+        [SerializeField] private float _clampX;
+
         private Rigidbody2D _rigidbody;
         private BallController _currentBall;
 
@@ -28,13 +31,18 @@ namespace App.Gameplay.Controllers
         public void SetCurrentBall(BallController ball)
         {
             _currentBall = ball;
+            ball.transform.SetParent(transform);
+            ball.transform.position = _ballPosition.position;
         }
 
         private void ProcessMovement(float input, float deltaTime)
         {
             var direction = Vector2.right;
-            var delta = _speed * deltaTime * input * direction ;
-            _rigidbody.MovePosition(_rigidbody.position + delta);
+            var delta = _speed * deltaTime * input * direction;
+            var newPos = _rigidbody.position + delta;
+            newPos.x = Mathf.Clamp(newPos.x, -1 * _clampX, _clampX);
+
+            _rigidbody.MovePosition(newPos);
         }
 
         private void LaunchCurrentBall()

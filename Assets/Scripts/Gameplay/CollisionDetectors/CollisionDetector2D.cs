@@ -10,13 +10,13 @@ namespace App.Gameplay.CollisionDetectors
 
         private void OnCollisionEnter2D(Collision2D collision)
         {
-            if (collision.rigidbody.TryGetComponent(out TTarget target))
+            if (collision.gameObject.TryGetComponent(out TTarget target))
                 OnEnter?.Invoke(target, collision);
         }
 
         private void OnCollisionExit2D(Collision2D collision)
         {
-            if (collision.rigidbody.TryGetComponent(out TTarget target))
+            if (collision.gameObject.TryGetComponent(out TTarget target))
                 OnExit?.Invoke(target, collision);
         }
     }

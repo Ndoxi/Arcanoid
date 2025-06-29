@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4620834673000739198}
-  - component: {fileID: 137082107990963438}
+  - component: {fileID: 3103278521838963854}
   m_Layer: 0
   m_Name: Collider
   m_TagString: Untagged
@@ -32,7 +32,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4641117588561205975}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!61 &137082107990963438
+--- !u!61 &3103278521838963854
 BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -76,7 +76,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.6713519, y: 0.47733027}
+  m_Size: {x: 1.618802, y: 0.5}
   m_EdgeRadius: 0
 --- !u!1 &2429931823188538201
 GameObject:
@@ -88,7 +88,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4641117588561205975}
   - component: {fileID: 868444328289395808}
-  - component: {fileID: 7671380794381255435}
   - component: {fileID: 8583489249369915417}
   m_Layer: 0
   m_Name: Paddle
@@ -112,6 +111,7 @@ Transform:
   m_Children:
   - {fileID: 4076308531561574080}
   - {fileID: 4620834673000739198}
+  - {fileID: 94104443577978473}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &868444328289395808
@@ -126,19 +126,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c80285baa2c0ce443890dd9d3098229f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _speed: 0
---- !u!114 &7671380794381255435
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2429931823188538201}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dd7e0c93b11a3e24a9eeee04e9b011cd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  _ballPosition: {fileID: 94104443577978473}
+  _speed: 25
+  _clampX: 1.7
 --- !u!50 &8583489249369915417
 Rigidbody2D:
   serializedVersion: 5
@@ -166,6 +156,37 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 0
+--- !u!1 &3072840634020234857
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 94104443577978473}
+  m_Layer: 0
+  m_Name: BallPosition
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &94104443577978473
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3072840634020234857}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.58, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4641117588561205975}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7023390916528492268
 GameObject:
   m_ObjectHideFlags: 0

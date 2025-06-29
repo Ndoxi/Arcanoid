@@ -10,8 +10,8 @@ namespace App.Mediators
     {
         [Inject] public MainMenuView View { get; private set; }
         [Inject] public MainMenuEnteredSignal OnEnterSignal { get; private set; }
-        [Inject] public ExitMainMenuSignal ExitSignal { get; private set; }
         [Inject] public MainMenuExitedSignal OnExitSignal { get; private set; }
+        [Inject] public LoadLevelSignal LoadLevelSignal { get; private set; }
 
         public override void OnRegister()
         {
@@ -43,7 +43,7 @@ namespace App.Mediators
 
         private void Play()
         {
-            ExitSignal.Dispatch();
+            LoadLevelSignal.Dispatch();
         }
     }
 }
